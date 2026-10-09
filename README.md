@@ -9,13 +9,12 @@ Lifting Weight Limit Web App
 2. แต่ละไฟล์ทำอะไร
 ไฟล์	หน้าที่
 routes/web.php	2 route: / → analyzer, /design → design (ไม่มี logic ฝั่งเซิร์ฟเวอร์)
-routes/console.php	คำสั่ง export:static เรนเดอร์ Blade เป็น dist/*.html สำหรับ GitHub Pages
+routes/console.php	คำสั่ง export:static เรนเดอร์ Blade เป็น docs/*.html สำหรับ GitHub Pages (Settings → Pages → main /docs)
 resources/views/layout.blade.php	โครงหน้า header, nav, footer ใช้ path แบบ relative
 resources/views/analyzer.blade.php	HTML ของ 3 ส่วน: Upload, Processing, Dashboard
 resources/views/design.blade.php	User flow, wireframe, โครงสร้าง, ตารางเทียบ Colab
 public/css/app.css	หน้าตาทั้งหมด และ @media print ที่ใช้พิมพ์ PDF
 public/js/vendor/ffmpeg/*	wrapper ของ ffmpeg.wasm สำหรับแปลง HEVC
-.github/workflows/pages.yml	build และ deploy Pages อัตโนมัติเมื่อ push main
 public/js/pipeline.js, public/js/app.js	อธิบายละเอียดในหัวข้อ 3 และ 4
 
 3. pipeline.js (พอร์ตจาก Colab)
