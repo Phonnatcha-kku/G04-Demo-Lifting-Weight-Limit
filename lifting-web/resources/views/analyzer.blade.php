@@ -1,0 +1,100 @@
+@extends('layout', ['page' => 'app'])
+@section('title', 'วิเคราะห์วิดีโอ')
+
+@section('content')
+{{-- ① Upload --}}
+<section id="upload" class="card">
+    <h1>วิเคราะห์ท่ายกทีละเฟรม: ตำแหน่งมือ · มุมบิดตัว · ตารางน้ำหนักปลอดภัย 3×4</h1>
+    <div class="grid2">
+        <div>
+            <label id="drop" class="drop">
+                <input id="file" type="file" accept=".mp4,.mov,.m4v,.webm,.mkv,.avi,video/*" hidden>
+                <b>ลากไฟล์วิดีโอมาวาง</b> หรือคลิกเพื่อเลือก
+                <small>MP4 · MOV · M4V · WEBM · MKV · AVI · ขนาดไฟล์ไม่เกิน 1 GB<br>ไฟล์ไม่เกิน 9,000 เฟรม · กล้องตั้งนิ่ง<br>codec ที่เบราว์เซอร์เปิดไม่ได้ (เช่น H.265) จะแปลงให้อัตโนมัติ</small>
+            </label>
+            <div id="fileinfo" class="muted"></div>
+            <div id="limits" class="muted"></div>
+            <div class="form">
+                <label>ส่วนสูงจริงของผู้ยก (ซม.) <input id="height" type="number" value="160" min="100" max="220" step="0.5"></label>
+                <label>FPS ของวิดีโอ <input id="fps" type="number" value="30" min="1" max="240"></label>
+            </div>
+            <button id="start" class="btn primary" disabled>▶ เริ่มวิเคราะห์ (ใช้ CPU/GPU ของเครื่องนี้)</button>
+            <video id="video" muted playsinline preload="auto" hidden></video>
+        </div>
+        <div>
+            <h3>ตารางเกณฑ์น้ำหนักสูงสุดที่ยอมรับได้ (kg)</h3>
+            <div id="previewMatrix" class="matrix"></div>
+            <p class="muted">แถว = ความสูงมือ V · คอลัมน์ = ระยะ H จากกึ่งกลางข้อเท้า (NIOSH) · 7″ = 17.8 ซม. · 12″ = 30.5 ซม.</p>
+        </div>
+    </div>
+</section>
+
+{{-- ② Processing (live) --}}
+<section id="processing" class="card" hidden>
+    <div class="row-between">
+        <h2>ผลทีละเฟรม</h2>
+        <span id="status" class="muted"></span>
+    </div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="row-between"><small id="count" class="muted"></small><button id="stop" class="btn small noprint">■ หยุด</button></div>
+    <div class="live">
+        <canvas id="out"></canvas>
+        <aside>
+            <div class="stats">
+                <div><span>twist</span><b id="lTwist">–</b></div>
+                <div><span>orient</span><b id="lOrient">–</b></div>
+                <div><span>H</span><b id="lH">–</b></div>
+                <div><span>V</span><b id="lV">–</b></div>
+                <div class="limit"><span>LIMIT</span><b id="lLimit">–</b></div>
+            </div>
+            <div id="liveMatrix" class="matrix small"></div>
+            <p class="muted">แถว = ความสูงมือ V · คอลัมน์ = ระยะ H จากกึ่งกลางข้อเท้า (NIOSH) · 7″ = 17.8 ซม. · 12″ = 30.5 ซม.</p>
+        </aside>
+    </div>
+</section>
+
+{{-- ③ Dashboard / Report (หน้านี้คือสิ่งที่พิมพ์เป็น PDF) --}}
+<section id="dashboard" class="card" hidden>
+    <div class="row-between">
+        <div><h2>Dashboard · รายงานผล</h2><small id="meta" class="muted"></small></div>
+        <div class="noprint">
+            <button id="csv" class="btn">⬇ CSV</button>
+            <button id="pdf" class="btn primary">⬇ PDF</button>
+            <button id="again" class="btn">วิเคราะห์คลิปใหม่</button>
+        </div>
+    </div>
+    <div id="summary"></div>
+    <div id="kpis" class="kpis"></div>
+
+    <div class="grid2">
+        <div>
+            <h3>เวลาที่มืออยู่ในแต่ละช่อง (วินาที) · กรอบเหลือง = ช่องน้ำหนักต่ำสุด</h3>
+            <div id="heatMatrix" class="matrix"></div>
+            <p id="zones" class="muted"></p>
+        </div>
+        <div>
+            <h3>แบบประเมินความเสี่ยงงานยก (RWL / LH Index)</h3>
+            <div class="form">
+                <label>ขั้น 1 น้ำหนักวัตถุ (kg) <input id="rWeight" type="number" value="10" min="0" step="0.5"></label>
+                <label>ขั้น 3 รอบยก/นาที <select id="rFreq"></select></label>
+                <label>ชั่วโมง/วัน <select id="rHours"><option value="0">น้อยกว่า 1 ชม.</option><option value="1">1–2 ชม.</option><option value="2">มากกว่า 2 ชม.</option></select></label>
+                <label>ขั้น 4 บิดตัว <select id="rTwist"><option value="1.0">น้อยกว่า 45° (1.0)</option><option value="0.85">45° ขึ้นไป (0.85)</option></select></label>
+            </div>
+            <div id="rOut" class="rout"></div>
+            <p class="muted">ขั้น 2 = น้ำหนักที่ยอมรับได้ต่ำสุดจากวิดีโอ · ขั้น 4 ตั้งค่าอัตโนมัติจากมุมบิดสูงสุด</p>
+        </div>
+    </div>
+
+    <h3>เส้นเวลา (แถบเทา = ช่วง calibrate · เส้นประ = ขอบตาราง)</h3>
+    <div class="charts">
+        <canvas id="cV"></canvas><canvas id="cH"></canvas><canvas id="cA"></canvas><canvas id="cL"></canvas>
+    </div>
+    <h3>ภาพนิ่ง 3 จังหวะ</h3>
+    <div id="snaps" class="snaps"></div>
+    <p class="muted small">⚠ ความลึกมาจากโครงร่าง 3 มิติที่ MediaPipe ประมาณจากกล้องตัวเดียว และ FOV กล้องเป็นค่าสมมติ (70°) ควรตรวจกับการวัดจริงก่อนนำไปประเมินความเสี่ยง</p>
+</section>
+@endsection
+
+@push('scripts')
+<script type="module" src="js/app.js"></script>
+@endpush
